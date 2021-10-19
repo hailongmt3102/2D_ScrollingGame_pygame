@@ -76,6 +76,8 @@ class CuteGirl:
         self.immune_time = 0
 
         self.num_of_coin = 0
+
+        self.attack_sound = load_sound("hit.wav")
         
 
     def update(self, delta_time):
@@ -249,6 +251,8 @@ class CuteGirl:
         if self.state not in ["hurt", "die", "attack"]:
             self.animate_tick["attack"] = current_time
             self.newstate("attack")
+            self.attack_sound.stop()
+            self.attack_sound.play()
     
     def fall_event(self):
         if self.is_grounding:
@@ -347,6 +351,10 @@ class Chomper:
 
         self.visible = False 
 
+        self.attack_sound = load_sound(os.path.join("chomper", "attack.mp3"))
+        self.die_sound = load_sound(os.path.join("chomper", "die.mp3"))
+
+
         
     def update(self, delta_time):
         if self.state == "die":
@@ -373,6 +381,8 @@ class Chomper:
             if abs(arrange) < 50:
                 self.state = "attack"
                 self.animate_tick["attack"] = pygame.time.get_ticks()/1000
+                self.attack_sound.stop()
+                self.attack_sound.play()
             else:
                 newpos = self.transfrom.position.x + self.direction * self.speed * delta_time
                 if newpos < self.moving_range[0] or newpos > self.moving_range[1]:
@@ -430,6 +440,8 @@ class Chomper:
         if self.hp <= 0:
             self.state = "die"
             self.animate_tick["die"] = pygame.time.get_ticks()/1000
+            self.die_sound.stop()
+            self.die_sound.play()
     
     def check_image_direction(self, image):
         if self.direction == 1:
@@ -542,6 +554,11 @@ class Gunner:
 
         self.hp = hp
 
+        self.attack_sound = load_sound(os.path.join("gunner", "attack.mp3"))
+
+        self.attack_sound_played = False
+        
+
     def update(self, delta_time):
         if self.state == "die":
             return
@@ -575,6 +592,9 @@ class Gunner:
         elif self.state == "attack":
             idx = int((current_time - self.animate_tick["attack"]) / self.animate_time["attack"])
             # draw firer
+            if idx == 24 and not self.attack_sound_played:
+                self.attack_sound.stop()
+                self.attack_sound.play()
             if idx >= 24 and idx <= 26:
                 self.firing = True
                 surface.blit(self.image_fire[0], self.image_fire[1].move(self.position.x - self.camera_pos.x - self.image_fire[1].width,self.position.y -self.camera_pos.y - 200 ))
@@ -583,6 +603,7 @@ class Gunner:
             
             if idx >= len(self.attack):
                 idx = len(self.attack) - 1
+                self.attack_sound_played = False
                 # back to idle state 
                 self.state = "idle"
                 self.animate_tick["idle"] = current_time
@@ -593,9 +614,8 @@ class Gunner:
             idx = int((current_time - self.animate_tick["die"]) / self.animate_time["die"])
             if idx >= len(self.die) :
                 idx = len(self.die) - 1
-
                 self.death = True
-                self.visitable = False
+                # self.visitable = False
 
             surface.blit(self.die[idx][0], self.die[idx][1].move(self.position.x - self.die[idx][1].width/2 - self.camera_pos.x, self.position.y - self.die[idx][1].height/2 - self.camera_pos.y))
 
@@ -702,3 +722,28 @@ class Text:
     def draw(self, surface):
         lb = self.font.render(self.text, True, self.color)
         surface.blit(lb, (self.pos.x, self.pos.y))
+
+
+class Button:
+    def __init__(self, pos, height, width, text:Text):
+        self.pos = pos
+        self.height = height
+        self.width = width
+        self.text = text
+
+        self.image = load_image(os.path.join("Menu", "Button.png"))
+
+    def check_click(self, click_pos):
+        if self.pos.x > click_pos[0] or self.pos.x + self.width < click_pos[0]:
+            return False
+
+        if self.pos.y > click_pos[1] or self.pos.y + self.height < click_pos[1]:
+            return False
+        
+        print("click button {}".format(self.text.text))
+        return True
+
+    def draw(self, surface):
+        # draw text
+        surface.blit(self.image[0], self.image[1].move(self.pos.x, self.pos.y))
+        self.text.draw(surface)
